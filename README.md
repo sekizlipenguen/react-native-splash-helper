@@ -15,11 +15,15 @@ A lightweight React Native library to automatically configure splash screens for
 
 Install the library using Yarn or npm:
 
+YARN
 ```bash
-yarn add @sekizlipenguen/react-native-splash-helper
-# or
-npm install @sekizlipenguen/react-native-splash-helper
+yarn add @sekizlipenguen/react-native-splash-helper --dev
 ```
+NPM
+```bash
+npm install @sekizlipenguen/react-native-splash-helper --save-dev
+```
+
 
 > Note: The `xml2js` package is included as a dependency and used internally.
 
