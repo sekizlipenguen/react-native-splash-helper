@@ -21,10 +21,10 @@
     "xml2js": "^0.4.23"
   },
   "scripts": {
-    "prepare": "node scripts/generateSplash.js"
+    "postinstall": "node scripts/cleanBin.js"
   },
   "bin": {
-    "@sekizlipenguen/react-native-splash-helper": "./scripts/generateSplash.js"
+    "@sekizlipenguen/react-native-splash-helper": "./bin/react-native-splash-helper"
   },
   "keywords": [
     "react-native",

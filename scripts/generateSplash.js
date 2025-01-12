@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const updateStyles = require('./updateStyles');
 const updateStoryboard = require('./updateStoryboard');
 
