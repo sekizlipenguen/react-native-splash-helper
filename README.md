@@ -1,3 +1,8 @@
+![platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-brightgreen.svg?style=flat-square&colorB=191A17)
+[![npm](https://img.shields.io/npm/v/@sekizlipenguen/react-native-splash-helper.svg?style=flat-square)](https://www.npmjs.com/package/@sekizlipenguen/react-native-splash-helper)
+[![npm](https://img.shields.io/npm/dm/@sekizlipenguen/react-native-splash-helper.svg?style=flat-square&colorB=007ec6)](https://www.npmjs.com/package/@sekizlipenguen/react-native-splash-helper)
+
+
 # @sekizlipenguen/react-native-splash-helper
 
 A lightweight React Native library to automatically configure splash screens for both Android and iOS platforms. Simplifies the splash screen setup process for developers.
