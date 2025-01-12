@@ -2,8 +2,8 @@
   "name": "@sekizlipenguen/react-native-splash-helper",
   "version": "0.0.1",
   "description": "A lightweight React Native library to automatically configure splash screens for both Android and iOS platforms. Simplifies the splash screen setup process for React Native developers.",
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "author": "Sekizli Penguen (https://github.com/sekizlipenguen)",
   "license": "MIT",
   "homepage": "https://github.com/sekizlipenguen/react-native-splash-helper#readme",
@@ -17,11 +17,14 @@
   "peerDependencies": {
     "react-native": ">=0.60"
   },
-  "devDependencies": {
+  "dependencies": {
     "xml2js": "^0.4.23"
   },
   "scripts": {
     "prepare": "node scripts/generateSplash.js"
+  },
+  "bin": {
+    "@sekizlipenguen/react-native-splash-helper": "./scripts/generateSplash.js"
   },
   "keywords": [
     "react-native",
