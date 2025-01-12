@@ -123,6 +123,12 @@ npx @sekizlipenguen/react-native-splash-helper generate-splash
 
 ---
 
+## Screenshots
+
+###  Splash Screen Example
+![Android Splash Screen](assets/splash_1.webp)
+---
+
 ## Notes
 
 - Make sure your splash image is available at the specified path.
