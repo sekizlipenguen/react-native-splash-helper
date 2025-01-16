@@ -71,7 +71,15 @@ npx @sekizlipenguen/react-native-splash-helper generate-splash
 
 ---
 
+
 ## What It Does
+
+This library handles the splash screen during the app's loading phase:
+- **iOS**: Manages the Launch Screen Storyboard until the app is fully loaded.
+- **Android**: Manages the Splash Activity and its configuration until React Native initializes.
+
+Once the app has fully loaded and transitions to the `App.js`, the splash screen is no longer managed by this library. At this point, you can create and display custom screens or animations within your React Native app.
+
 
 1. **Android**:
 
