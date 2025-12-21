@@ -23,17 +23,47 @@ function updateStoryboard(iosConfig) {
     fs.mkdirSync(splashImagePath, { recursive: true });
   }
 
-  // Splash görseli kopyalanıyor
+  // Splash görseli kopyalanıyor - Cache sorununu önlemek için rastgele isim kullan
   const splashImageSource = path.resolve(iosConfig.splashImage);
-  const splashImageTarget = path.join(splashImagePath, 'splash_image.png');
+  // Timestamp ve random sayı ile benzersiz isim oluştur
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  const uniqueImageName = `splash_image_${timestamp}_${random}.png`;
+  const splashImageTarget = path.join(splashImagePath, uniqueImageName);
+
+  // Eski splash_image.png dosyasını sil (varsa)
+  const oldImagePath = path.join(splashImagePath, 'splash_image.png');
+  if (fs.existsSync(oldImagePath)) {
+    fs.unlinkSync(oldImagePath);
+  }
+
+  // Eski rastgele isimli dosyaları temizle (sadece son 5 dosyayı tut)
+  try {
+    const files = fs.readdirSync(splashImagePath).filter(file =>
+        file.startsWith('splash_image_') && file.endsWith('.png') && file !== 'splash_image.png'
+    );
+    if (files.length > 5) {
+      // En eski dosyaları sil (timestamp'e göre sırala)
+      files.sort().slice(0, files.length - 5).forEach(file => {
+        try {
+          fs.unlinkSync(path.join(splashImagePath, file));
+        } catch (e) {
+          // Silme hatası görmezden gel
+        }
+      });
+    }
+  } catch (e) {
+    // Dizin okuma hatası görmezden gel
+  }
+
   fs.copyFileSync(splashImageSource, splashImageTarget);
 
-  // Contents.json dosyasını oluştur
+  // Contents.json dosyasını oluştur - Yeni dosya adını kullan
   const contentsJson = {
     images: [
-      { idiom: 'universal', filename: 'splash_image.png', scale: '1x' },
-      { idiom: 'universal', filename: 'splash_image.png', scale: '2x' },
-      { idiom: 'universal', filename: 'splash_image.png', scale: '3x' },
+      { idiom: 'universal', filename: uniqueImageName, scale: '1x' },
+      { idiom: 'universal', filename: uniqueImageName, scale: '2x' },
+      { idiom: 'universal', filename: uniqueImageName, scale: '3x' },
     ],
     info: { version: 1, author: 'xcode' },
   };

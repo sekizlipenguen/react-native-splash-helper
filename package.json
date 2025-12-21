@@ -1,6 +1,6 @@
 {
   "name": "@sekizlipenguen/react-native-splash-helper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A lightweight React Native library to automatically configure splash screens for both Android and iOS platforms. Simplifies the splash screen setup process for React Native developers.",
   "main": "index.js",
   "types": "index.d.ts",
