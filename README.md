@@ -2,165 +2,137 @@
 [![npm](https://img.shields.io/npm/v/@sekizlipenguen/react-native-splash-helper.svg?style=flat-square)](https://www.npmjs.com/package/@sekizlipenguen/react-native-splash-helper)
 [![npm](https://img.shields.io/npm/dm/@sekizlipenguen/react-native-splash-helper.svg?style=flat-square&colorB=007ec6)](https://www.npmjs.com/package/@sekizlipenguen/react-native-splash-helper)
 
-
 # @sekizlipenguen/react-native-splash-helper
 
-A lightweight React Native library to automatically configure splash screens for both Android and iOS platforms. Simplifies the splash screen setup process for developers.
+A lightweight CLI that generates native splash screen assets for bare React Native apps (Android + iOS) from `react-native.config.js`.
 
-## Features
-
-- **Automatic Splash Screen Setup**: Configures splash screens for both Android and iOS with minimal setup.
-- **Theme Detection**: Automatically detects application and activity themes in `AndroidManifest.xml`.
-- **Cross-Platform Support**: Works seamlessly on macOS, Linux, and Windows.
-- **Customizable**: Easily define splash image and background color through a simple configuration.
-
----
-
-## Installation
-
-Install the library using Yarn or npm:
-
-YARN
-```bash
-yarn add @sekizlipenguen/react-native-splash-helper --dev
-```
-NPM
-```bash
-npm install @sekizlipenguen/react-native-splash-helper --save-dev
-```
-
-
-> Note: The `xml2js` package is included as a dependency and used internally.
-
----
-
-## Configuration
-
-### Configuration Options
-
-| Option                  | Platform | Type     | Description                                                            |
-|-------------------------|----------|----------|------------------------------------------------------------------------|
-| `splashImage`           | Both     | `string` | Path to the splash image file.                                         |
-| `backgroundColor`       | Android  | `string` | Background color in HEX format (e.g., `#ffffff`).                      |
-
-To configure the splash helper, add a section to your `react-native.config.js` file:
-
-```javascript
-module.exports = {
-  dependencies: {},
-  '@sekizlipenguen/react-native-splash-helper': {
-    android: {
-      splashImage: './assets/splash_image.png' // Path to your splash image
-    },
-    ios: {
-      splashImage: './assets/splash_image.png'  // Path to your splash image
-    }
-  }
-};
-```
-
----
-
-## Usage
-
-Run the following command to generate the splash screens:
-
-```bash
-npx @sekizlipenguen/react-native-splash-helper generate-splash
-```
-
----
-
-
-## What It Does
-
-This library handles the splash screen during the app's loading phase:
-- **iOS**: Manages the Launch Screen Storyboard until the app is fully loaded.
-- **Android**: Manages the Splash Activity and its configuration until React Native initializes.
-
-Once the app has fully loaded and transitions to the `App.js`, the splash screen is no longer managed by this library. At this point, you can create and display custom screens or animations within your React Native app.
-
-
-1. **Android**:
-
-    - Updates `styles.xml` to include the `android:windowBackground` property for detected themes.
-    - Updates or creates `colors.xml` with the specified background color.
-    - Generates the drawable resource for the splash screen.
-    - Updates the `AndroidManifest.xml` to ensure consistency in theme configuration.
-
-2. **iOS**:
-
-    - Updates the `LaunchScreen.storyboard` file with the splash image and background color.
-    - Creates the necessary image assets in the `Images.xcassets` directory.
-
----
+> This package is a **generator**, not a runtime splash controller. After the native splash dismisses, hide/retain logic is up to your app (e.g. `react-native-bootsplash` or the AndroidX SplashScreen API).
 
 ## Example
 
-### Android Output
+A React Native **0.86.2** playground lives in [`example/`](example/). See [example/README.md](example/README.md) for setup and iOS run instructions.
 
-- Updates the following in `styles.xml`:
-  ```xml
-  <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-      <item name="android:windowBackground">@drawable/splash_background</item>
-  </style>
-  ```
-- Updates or creates `colors.xml`:
-  ```xml
-  <resources>
-      <color name="splash_background">#ffffff</color>
-  </resources>
-  ```
-- Creates `splash_background.xml` in `drawable`:
-  ```xml
-  <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-      <item android:drawable="@color/splash_background" />
-      <item>
-          <bitmap android:gravity="fill" android:src="@drawable/splash_image" />
-      </item>
-  </layer-list>
-  ```
+## Features
 
-### iOS Output
+- Config-driven splash generation for Android and iOS
+- Theme discovery from `AndroidManifest.xml` (application + LAUNCHER activity)
+- `resizeMode`: `cover` | `contain` | `fill`
+- Optional dark mode colors / images
+- Android 12+ `values-v31` SplashScreen attributes (with legacy `windowBackground` fallback)
+- Auto-wire AndroidX SplashScreen (`wireNative`) + full-bleed cover overlay
+- Optional density generation via `sharp`
+- `--android` / `--ios` / `--dry-run` flags
 
-- Updates `LaunchScreen.storyboard` with:
-  ```xml
-  <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" ...>
-      <scene>
-          ...
-          <view key="view" contentMode="scaleToFill">
-              <color key="backgroundColor" systemColor="systemBackgroundColor" />
-              <subviews>
-                  <imageView contentMode="scaleAspectFill" image="splash_image" ... />
-              </subviews>
-          </view>
-      </scene>
-  </document>
-  ```
+## Installation
 
----
+```bash
+yarn add @sekizlipenguen/react-native-splash-helper --dev
+# or
+npm install @sekizlipenguen/react-native-splash-helper --save-dev
+```
 
-## Screenshots
+Optional (Android density buckets):
 
-###  Splash Screen Example
-![Android Splash Screen](assets/splash_1.webp)
----
+```bash
+yarn add sharp --dev
+```
+
+## Configuration
+
+Add a section to `react-native.config.js`:
+
+```javascript
+module.exports = {
+  '@sekizlipenguen/react-native-splash-helper': {
+    android: {
+      splashImage: './assets/splash.png',
+      backgroundColor: '#FFFFFF',
+      darkBackgroundColor: '#000000', // optional
+      darkSplashImage: './assets/splash-dark.png', // optional
+      resizeMode: 'cover', // cover | contain | fill
+      android12: true, // default true — writes values-v31 styles
+      wireNative: true, // default true — patches build.gradle + MainActivity
+      generateDensities: false, // set true + install sharp for mdpi…xxxhdpi
+    },
+    ios: {
+      splashImage: './assets/splash.png',
+      backgroundColor: '#FFFFFF',
+      darkSplashImage: './assets/splash-dark.png', // optional (imageset appearances)
+      resizeMode: 'cover',
+    },
+  },
+};
+```
+
+### Options
+
+| Option | Platform | Default | Description |
+|--------|----------|---------|-------------|
+| `splashImage` | Both | — | Path to splash image (`png` / `jpg` / `webp`). Required. |
+| `backgroundColor` | Both | `#FFFFFF` | Hex background (`#FFF`, `#FFFFFF`, or `#RRGGBBAA`). |
+| `darkBackgroundColor` | Android | — | Night `colors.xml` splash background. |
+| `darkSplashImage` | Both | — | Dark image (`drawable-night` / iOS imageset appearance). |
+| `resizeMode` | Both | `cover` | `cover` (aspect-fill), `contain` (letterbox), or `fill` (stretch). On Android, `cover` is baked with `sharp` into a 1080×2400 image so it does not squash. |
+| `android12` | Android | `true` | Write Android 12+ SplashScreen style attrs under `values-v31`. |
+| `wireNative` | Android | `true` | Auto-add `core-splashscreen` and wire `installSplashScreen()` in `MainActivity` (cover overlay for `cover`/`fill`). |
+| `generateDensities` | Android | `false` | Generate density drawables with `sharp`. |
+
+## Usage
+
+```bash
+npx react-native-splash-helper
+# or
+npx @sekizlipenguen/react-native-splash-helper generate-splash
+```
+
+Flags:
+
+```bash
+npx react-native-splash-helper --android
+npx react-native-splash-helper --ios
+npx react-native-splash-helper --dry-run
+```
+
+React Native CLI command (via `package.json` `commands` export):
+
+```bash
+npx react-native generate-splash
+```
+
+## What it writes
+
+### Android
+
+- Updates detected themes in `styles.xml` with `android:windowBackground` → `@drawable/splash_background`
+- Creates/updates `values/colors.xml` (`splash_background`)
+- Writes `drawable/splash_background.xml` + copies `splash_image.*`
+- Optional: `values-night/colors.xml`, `drawable-night/`
+- Optional: `values-v31/styles.xml` with `windowSplashScreenBackground` / `windowSplashScreenAnimatedIcon`
+- Optional: `drawable-mdpi` … `drawable-xxxhdpi` when `generateDensities: true` and `sharp` is installed
+- With `wireNative` (default): `android/app/build.gradle` + `MainActivity` SplashScreen wiring
+
+**Android 12+ / `cover` note:** The system splash background may only be a **solid color**, and the animated icon is always a centered circle — a full-bleed image there looks squashed. With defaults (`android12` + `wireNative`), `generate-splash`:
+1. Bakes the image with `sharp` to 1080×2400 (`fit: 'cover'`)
+2. Writes `values-v31` color + icon mask
+3. Adds `androidx.core:core-splashscreen` to `android/app/build.gradle`
+4. Wires `MainActivity` with `installSplashScreen()` and a short `CENTER_CROP` cover overlay
+
+Set `wireNative: false` to skip Gradle/MainActivity patching. For logo-style splash use `resizeMode: 'contain'`.
+
+### iOS
+
+- Overwrites `LaunchScreen.storyboard` with a full-bleed image + configured background color
+- Creates/updates `Images.xcassets/splash_image.imageset` with a stable filename (no random cache-bust names)
+- Optional dark image via Xcode `appearances`
+
+The storyboard file is **replaced** on each run so results stay predictable.
 
 ## Notes
 
-- Make sure your splash image is available at the specified path.
-- If any required file (e.g., `styles.xml`, `colors.xml`) does not exist, it will be created automatically.
-- The script is non-destructive and will not overwrite existing configurations unless necessary.
-
----
-
-## Contributing
-
-Contributions are welcome! Please submit an issue or pull request on the [GitHub repository](https://github.com/sekizlipenguen/react-native-splash-helper).
-
----
+- Run the generator from the React Native project root (where `react-native.config.js` lives).
+- Missing/invalid config exits with code `1` and a clear message.
+- This tool does not manage the in-JS splash after the native layer hands off to React Native.
 
 ## License
 
 MIT © [Sekizli Penguen](https://github.com/sekizlipenguen)
-

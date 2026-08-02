@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 
-const path = require('path');
-const generateSplash = require(path.join(__dirname, '../scripts/generateSplash'));
+const generateSplash = require('../scripts/generateSplash');
 
-generateSplash();
+const args = process.argv.slice(2);
+
+// Allow both `react-native-splash-helper` and `... generate-splash`
+const filtered = args[0] === 'generate-splash' ? args.slice(1) : args;
+
+generateSplash(undefined, filtered).then(() => {
+  if (process.exitCode && process.exitCode !== 0) {
+    process.exit(process.exitCode);
+  }
+});

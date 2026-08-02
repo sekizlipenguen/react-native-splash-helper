@@ -14,17 +14,32 @@
   "bugs": {
     "url": "https://github.com/sekizlipenguen/react-native-splash-helper/issues"
   },
+  "files": [
+    "bin",
+    "scripts/generateSplash.js",
+    "scripts/updateStyles.js",
+    "scripts/updateStoryboard.js",
+    "scripts/utils",
+    "index.js",
+    "index.d.ts",
+    "README.md"
+  ],
   "peerDependencies": {
     "react-native": ">=0.60"
   },
-  "dependencies": {
-    "xml2js": "^0.4.23"
+  "optionalDependencies": {
+    "sharp": "^0.33.5"
   },
-  "scripts": {
-    "postinstall": "node scripts/cleanBin.js"
+  "dependencies": {
+    "xml2js": "^0.6.2"
   },
   "bin": {
+    "react-native-splash-helper": "./bin/react-native-splash-helper",
     "@sekizlipenguen/react-native-splash-helper": "./bin/react-native-splash-helper"
+  },
+  "scripts": {
+    "test": "node scripts/__tests__/color.test.js && node scripts/__tests__/resizeMode.test.js && node scripts/__tests__/config.test.js && node scripts/__tests__/androidTheme.test.js && node scripts/__tests__/androidWire.test.js",
+    "check": "node scripts/check-integrity.js"
   },
   "keywords": [
     "react-native",

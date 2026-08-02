@@ -1,87 +1,54 @@
 const fs = require('fs');
 const path = require('path');
+const { hexToRgbComponents } = require('./utils/color');
+const { iosContentModeFor } = require('./utils/resizeMode');
+const { ensureDir, writeFile, copyFile, removeFile } = require('./utils/fs');
+const log = require('./utils/log');
 
-function updateStoryboard(iosConfig) {
-  const iosAppName = fs
-  .readdirSync(path.join(process.cwd(), 'ios'))
-  .find((dir) => fs.existsSync(path.join(process.cwd(), 'ios', dir, 'Info.plist')));
-
-  if (!iosAppName) {
-    console.error('iOS app name could not be resolved.');
-    return;
+function resolveIosAppName(root) {
+  const iosDir = path.join(root, 'ios');
+  if (!fs.existsSync(iosDir)) {
+    throw new Error(`ios/ directory not found at ${iosDir}`);
   }
 
-  const storyboardPath = path.join(process.cwd(), `ios/${iosAppName}/LaunchScreen.storyboard`);
-  const assetsPath = path.join(process.cwd(), `ios/${iosAppName}/Images.xcassets`);
-  const splashImagePath = path.join(assetsPath, 'splash_image.imageset');
+  const appName = fs
+    .readdirSync(iosDir)
+    .find((dir) => fs.existsSync(path.join(iosDir, dir, 'Info.plist')));
 
-  // Assets ve splash image için dizinler oluşturuluyor
-  if (!fs.existsSync(assetsPath)) {
-    fs.mkdirSync(assetsPath, { recursive: true });
-  }
-  if (!fs.existsSync(splashImagePath)) {
-    fs.mkdirSync(splashImagePath, { recursive: true });
+  if (!appName) {
+    throw new Error('iOS app name could not be resolved (no Info.plist under ios/*).');
   }
 
-  // Splash görseli kopyalanıyor - Cache sorununu önlemek için rastgele isim kullan
-  const splashImageSource = path.resolve(iosConfig.splashImage);
-  // Timestamp ve random sayı ile benzersiz isim oluştur
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  const uniqueImageName = `splash_image_${timestamp}_${random}.png`;
-  const splashImageTarget = path.join(splashImagePath, uniqueImageName);
+  return appName;
+}
 
-  // Eski splash_image.png dosyasını sil (varsa)
-  const oldImagePath = path.join(splashImagePath, 'splash_image.png');
-  if (fs.existsSync(oldImagePath)) {
-    fs.unlinkSync(oldImagePath);
-  }
+function cleanImageset(splashImagePath, { dryRun = false } = {}) {
+  if (!fs.existsSync(splashImagePath)) return;
 
-  // Eski rastgele isimli dosyaları temizle (sadece son 5 dosyayı tut)
-  try {
-    const files = fs.readdirSync(splashImagePath).filter(file =>
-        file.startsWith('splash_image_') && file.endsWith('.png') && file !== 'splash_image.png'
-    );
-    if (files.length > 5) {
-      // En eski dosyaları sil (timestamp'e göre sırala)
-      files.sort().slice(0, files.length - 5).forEach(file => {
-        try {
-          fs.unlinkSync(path.join(splashImagePath, file));
-        } catch (e) {
-          // Silme hatası görmezden gel
-        }
-      });
+  for (const file of fs.readdirSync(splashImagePath)) {
+    // Remove legacy random-named cache-bust files and any previous splash images
+    if (
+      (file.startsWith('splash_image') && file.endsWith('.png')) ||
+      (file.startsWith('splash_image') && /\.(jpg|jpeg|webp)$/i.test(file)) ||
+      file === 'Contents.json'
+    ) {
+      // Keep Contents.json for rewrite; delete image files
+      if (file === 'Contents.json') continue;
+      removeFile(path.join(splashImagePath, file), { dryRun, log: log.info });
     }
-  } catch (e) {
-    // Dizin okuma hatası görmezden gel
   }
+}
 
-  fs.copyFileSync(splashImageSource, splashImageTarget);
+function buildStoryboard({ contentMode, backgroundColor }) {
+  const rgb = hexToRgbComponents(backgroundColor);
 
-  // Contents.json dosyasını oluştur - Yeni dosya adını kullan
-  const contentsJson = {
-    images: [
-      { idiom: 'universal', filename: uniqueImageName, scale: '1x' },
-      { idiom: 'universal', filename: uniqueImageName, scale: '2x' },
-      { idiom: 'universal', filename: uniqueImageName, scale: '3x' },
-    ],
-    info: { version: 1, author: 'xcode' },
-  };
-  fs.writeFileSync(
-      path.join(splashImagePath, 'Contents.json'),
-      JSON.stringify(contentsJson, null, 2),
-      'utf8'
-  );
-
-  // Storyboard içeriği
-  const storyboardContent = `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
     <device id="retina4_7" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -93,12 +60,12 @@ function updateStoryboard(iosConfig) {
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" image="splash_image" translatesAutoresizingMaskIntoConstraints="NO" id="img-splash">
+                            <imageView userInteractionEnabled="NO" contentMode="${contentMode}" image="splash_image" translatesAutoresizingMaskIntoConstraints="NO" id="img-splash">
                                 <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="jCx-lo-f50"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <color key="backgroundColor" red="${rgb.red}" green="${rgb.green}" blue="${rgb.blue}" alpha="${rgb.alpha}" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="img-splash" firstAttribute="bottom" secondItem="Ze5-6b-2t3" secondAttribute="bottom" id="bottom-constraint"/>
                             <constraint firstItem="img-splash" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="leading-constraint"/>
@@ -113,15 +80,114 @@ function updateStoryboard(iosConfig) {
         </scene>
     </scenes>
     <resources>
-        <image name="splash_image" width="645" height="1398"/>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
+        <image name="splash_image" width="375" height="667"/>
     </resources>
-</document>`;
+</document>
+`;
+}
 
-  fs.writeFileSync(storyboardPath, storyboardContent, 'utf8');
-  console.log('LaunchScreen.storyboard updated successfully.');
+/**
+ * @param {import('./utils/config').PlatformConfig} iosConfig
+ * @param {{ dryRun?: boolean, root?: string }} [options]
+ */
+function updateStoryboard(iosConfig, options = {}) {
+  const dryRun = Boolean(options.dryRun);
+  const root = options.root || process.cwd();
+
+  const iosAppName = resolveIosAppName(root);
+  const storyboardPath = path.join(root, 'ios', iosAppName, 'LaunchScreen.storyboard');
+  const assetsPath = path.join(root, 'ios', iosAppName, 'Images.xcassets');
+  const splashImagePath = path.join(assetsPath, 'splash_image.imageset');
+  const darkImagesetPath = path.join(assetsPath, 'splash_image.imageset');
+
+  ensureDir(assetsPath, { dryRun });
+  ensureDir(splashImagePath, { dryRun });
+
+  cleanImageset(splashImagePath, { dryRun });
+
+  const sourceExt = path.extname(iosConfig.splashImage).toLowerCase();
+  const lightFileName = `splash_image${sourceExt === '.jpeg' ? '.jpg' : sourceExt}`;
+  const lightTarget = path.join(splashImagePath, lightFileName);
+  copyFile(iosConfig.splashImage, lightTarget, { dryRun, log: log.info });
+
+  /** @type {object} */
+  const contentsJson = {
+    images: [
+      {
+        idiom: 'universal',
+        filename: lightFileName,
+        scale: '1x',
+      },
+      {
+        idiom: 'universal',
+        filename: lightFileName,
+        scale: '2x',
+      },
+      {
+        idiom: 'universal',
+        filename: lightFileName,
+        scale: '3x',
+      },
+    ],
+    info: { version: 1, author: 'xcode' },
+  };
+
+  // Dark appearance image (optional) — Xcode appearances API
+  if (iosConfig.darkSplashImage) {
+    const darkExt = path.extname(iosConfig.darkSplashImage).toLowerCase();
+    const darkFileName = `splash_image_dark${darkExt === '.jpeg' ? '.jpg' : darkExt}`;
+    copyFile(iosConfig.darkSplashImage, path.join(darkImagesetPath, darkFileName), {
+      dryRun,
+      log: log.info,
+    });
+
+    contentsJson.images = [
+      { idiom: 'universal', filename: lightFileName, scale: '1x' },
+      { idiom: 'universal', filename: lightFileName, scale: '2x' },
+      { idiom: 'universal', filename: lightFileName, scale: '3x' },
+      {
+        appearances: [{ appearance: 'luminosity', value: 'dark' }],
+        idiom: 'universal',
+        filename: darkFileName,
+        scale: '1x',
+      },
+      {
+        appearances: [{ appearance: 'luminosity', value: 'dark' }],
+        idiom: 'universal',
+        filename: darkFileName,
+        scale: '2x',
+      },
+      {
+        appearances: [{ appearance: 'luminosity', value: 'dark' }],
+        idiom: 'universal',
+        filename: darkFileName,
+        scale: '3x',
+      },
+    ];
+  }
+
+  writeFile(
+    path.join(splashImagePath, 'Contents.json'),
+    `${JSON.stringify(contentsJson, null, 2)}\n`,
+    { dryRun, log: log.info }
+  );
+
+  // Note: LaunchScreen storyboard does not support dark/light trait variations for
+  // backgroundColor easily; we use the light backgroundColor. Dark image still swaps via imageset.
+  const contentMode = iosContentModeFor(iosConfig.resizeMode);
+  const bg = iosConfig.backgroundColor;
+  const storyboardContent = buildStoryboard({ contentMode, backgroundColor: bg });
+
+  writeFile(storyboardPath, storyboardContent, { dryRun, log: log.info });
+  log.success(`LaunchScreen.storyboard updated (${iosAppName}).`);
+
+  if (iosConfig.darkBackgroundColor) {
+    log.warn(
+      'ios.darkBackgroundColor is accepted for API symmetry; LaunchScreen.storyboard uses backgroundColor. Dark splash image (darkSplashImage) is applied via imageset appearances.'
+    );
+  }
+
+  // Touch Contents.json mtime already handled by rewrite — avoids random filename cache hack
 }
 
 module.exports = updateStoryboard;
